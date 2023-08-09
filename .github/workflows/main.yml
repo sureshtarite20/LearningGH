@@ -1,1 +1,72 @@
-name: BUILD CI
+name: ci-cd for DotNet WebApp
+
+
+env:
+  AZURE_WEBAPP_NAME: adevRG-bp-webapp50-RG01-B1    
+  AZURE_WEBAPP_PACKAGE_PATH: '.'      
+  DOTNET_VERSION: '7.0.x'                 
+
+on:
+  # push:
+  #   branches: [ "main" ]
+    workflow_dispatch: 
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      #- name: Azure Login
+      #  uses: Azure/login@v1.4.2
+      #  with: 
+      #    creds: ${{ secrets.AZURE_SPN_CREDENTIAL }}
+      # - name: bicepInfra
+      #  working-directory: '${{ github.workspace }}/bicep'
+      #  run: |
+      #      az deployment group create -g azbicep_prd_eus_rg1 -f ./Main.bicep -p ./main.prd.parameters.json
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Set up dependency caching for faster builds
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      - name: Build with dotnet
+        run: dotnet build --configuration Release
+      - name: dotnet publish
+        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v3
+        with:
+          name: .net-app
+          path: ${{env.DOTNET_ROOT}}/myapp
+      
+  deploy:
+    permissions:
+      contents: none
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: .net-app
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.ASP_CORE_WEB01_PUBLISH_PROFILE }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
