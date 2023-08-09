@@ -1,6 +1,5 @@
 name: ci-cd for DotNet WebApp
 
-
 env:
   AZURE_WEBAPP_NAME: adevRG-bp-webapp50-RG01-B1    
   AZURE_WEBAPP_PACKAGE_PATH: '.'      
@@ -15,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  dotnet_build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -49,24 +48,24 @@ jobs:
           name: .net-app
           path: ${{env.DOTNET_ROOT}}/myapp
       
-  deploy:
-    permissions:
-      contents: none
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+#   deploy:
+#     permissions:
+#       contents: none
+#     runs-on: ubuntu-latest
+#     needs: build
+#     environment:
+#       name: 'Production'
+#       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v3
-        with:
-          name: .net-app
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.ASP_CORE_WEB01_PUBLISH_PROFILE }}
-          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+#     steps:
+#       - name: Download artifact from build job
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: .net-app
+#       - name: Deploy to Azure Web App
+#         id: deploy-to-webapp
+#         uses: azure/webapps-deploy@v2
+#         with:
+#           app-name: ${{ env.AZURE_WEBAPP_NAME }}
+#           publish-profile: ${{ secrets.ASP_CORE_WEB01_PUBLISH_PROFILE }}
+#           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
